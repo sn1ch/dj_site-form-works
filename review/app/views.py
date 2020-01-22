@@ -21,35 +21,38 @@ class ProductView(View):
         product = get_object_or_404(Product, id=pk)
         reviews = Review.objects.filter(product=product)
         form = ReviewForm
+
         context = {
             'form': form,
             'product': product,
-            'reviews': reviews
+            'reviews': reviews,
+            'is_review_exist': False
         }
+
+        if 'reviewed_products' in request.session.keys() and pk in request.session['reviewed_products']:
+            context['is_review_exist'] = True
+
         return render(request, template, context)
 
     def post(self, request, pk):
         template = 'app/product_detail.html'
         product = get_object_or_404(Product, id=pk)
-        form = ReviewForm
+        form = ReviewForm(request.POST)
+        
         context = {
             'form': form,
             'product': product,
-            'is_review_exist': False
+            'is_review_exist': True
         }
-
         if 'reviewed_products' not in request.session.keys():
             request.session['reviewed_products'] = []
 
         if pk not in request.session['reviewed_products']:
             request.session['reviewed_products'].append(pk)
-            print(request.session['reviewed_products'])
-            text = request.POST.get('text')
+            if form.is_valid():
+                text = form.cleaned_data['text']
             Review.objects.create(text=text, product=product)
             request.session.modified = True
-            context['is_review_exist'] = True
-        else:
-            context['is_review_exist'] = True
 
         reviews = Review.objects.filter(product=product)
         context['reviews'] = reviews
